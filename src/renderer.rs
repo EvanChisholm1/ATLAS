@@ -64,6 +64,9 @@ impl FrameBuffer {
                 y1 += sy
             }
         }
+    }
+
+    pub fn draw_triangle(&mut self, tri: &Triangle) {
 
     }
 }

@@ -20,6 +20,10 @@ impl Vector2D {
             y: self.y + other.y,
         }
     }
+
+    pub fn print(&self) {
+        println!("x: {}, y: {}", self.x, self.y);
+    }
 }
 
 impl ops::Add<Vector2D> for Vector2D {
@@ -45,9 +49,9 @@ impl ops::Mul<f64> for Vector2D {
 }
 
 pub struct Vector3D {
-    x: f64,
-    y: f64,
-    z: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Vector3D {
@@ -65,6 +69,10 @@ impl Vector3D {
             y: self.y + other.y,
             z: self.z + other.z,
         }
+    }
+
+    pub fn print(&self) {
+        println!("x: {}, y: {}, z: {}", self.x, self.y, self.z);
     }
 }
 
