@@ -1,5 +1,7 @@
+use std::f64::consts::PI;
+
 use linalg::{Matrix4D, Vector2D, Vector3D};
-use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
+use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions, CursorStyle};
 use renderer::{Color, FrameBuffer, Mesh, Triangle};
 
 mod linalg;
@@ -14,6 +16,36 @@ fn geometric_to_screen(vec: &Vector3D, width: usize, height: usize) -> Vector2D 
         y: y_screen,
     }
 }
+
+fn get_z_rotation_matrix(theta: f64) -> Matrix4D {
+    Matrix4D::new([
+        [theta.cos(), theta.sin(), 0.0, 0.0],
+        [-theta.sin(), theta.cos(), 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ])
+}
+
+fn get_x_rotation_matrix(theta: f64) -> Matrix4D {
+    Matrix4D::new([
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, theta.cos(), theta.sin(), 0.0],
+        [0.0, -theta.sin(), theta.cos(), 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ])
+}
+
+fn get_y_rotation_matrix(theta: f64) -> Matrix4D {
+    Matrix4D::new([
+        [theta.cos(), 0.0, -theta.sin(), 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [theta.sin(), 0.0, theta.cos(), 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ])
+}
+
+
+
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 360;
@@ -119,8 +151,59 @@ fn main() {
     };
 
     let mut theta: f64 = 0.0;
+    let mut cam_loc = Vector3D::new(0.0, 0.0, 3.0);
+    let mut cam_x_theta: f64 = 0.0;
+    let mut cam_y_theta: f64 = 0.0;
+
+    let mut prev_mouse_x = 0.0;
+    let mut prev_mouse_y = 0.0;
+
+    let mut has_initialized_mouse_pos = false;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
+
+        if let Some((x, y)) = window.get_mouse_pos(minifb::MouseMode::Pass) {
+            if !has_initialized_mouse_pos {
+                prev_mouse_x = x;
+                prev_mouse_y = y;
+                has_initialized_mouse_pos = true;
+            }
+
+            let delta_x = x - prev_mouse_x;
+            let delta_y = y - prev_mouse_y;
+
+            cam_x_theta += -(delta_y * 0.01) as f64;
+            cam_y_theta += -(delta_x * 0.01) as f64;
+            // cam_y_theta = cam
+
+            cam_x_theta = cam_x_theta.clamp(-PI / 4.0, PI / 4.0);
+
+            prev_mouse_x = x;
+            prev_mouse_y = y;
+        }
+
+        if window.is_key_down(Key::A) {
+            cam_loc.x += 0.1;
+        }
+        if window.is_key_down(Key::D) {
+            cam_loc.x -= 0.1;
+        }
+
+        if window.is_key_down(Key::W) {
+            cam_loc.z -= 0.1;
+        }
+        if window.is_key_down(Key::S) {
+            cam_loc.z += 0.1;
+        }
+
+        if window.is_key_down(Key::Space) {
+            cam_loc.y -= 0.1;
+        }
+        if window.is_key_down(Key::LeftCtrl) {
+            cam_loc.y += 0.1;
+        }
+
+
         frame_buffer.clear();
         theta += 0.03;
 
@@ -138,11 +221,13 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0],
         ]);
 
-        let z_translator = Vector3D::new(0.0, 0.0, 3.0);
+        // let z_translator = Vector3D::new(0.0, 0.0, 3.0);
         let proj_2d = cube_mesh
-            .apply_transformation(&mat_rot_z)
-            .apply_transformation(&mat_rot_x)
-            .translate(&z_translator)
+            // .apply_transformation(&mat_rot_z)
+            // .apply_transformation(&mat_rot_x)
+            .translate(&cam_loc)
+            .apply_transformation(&get_x_rotation_matrix(cam_x_theta))
+            .apply_transformation(&get_y_rotation_matrix(cam_y_theta))
             .apply_transformation(&proj_mat);
 
         for triangle in proj_2d.triangles {
