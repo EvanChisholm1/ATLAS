@@ -63,7 +63,7 @@ impl Vector3D {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn add(&self, other: Vector3D) -> Vector3D {
+    pub fn add(&self, other: &Vector3D) -> Vector3D {
         Vector3D {
             x: self.x + other.x,
             y: self.y + other.y,

@@ -65,6 +65,28 @@ fn main() {
                 Vector3D::new(0.0, 1.0, 0.0),
                 Vector3D::new(0.0, 0.0, 0.0),
             ),
+            // top
+            Triangle::new(
+                Vector3D::new(0.0, 1.0, 0.0),
+                Vector3D::new(0.0, 1.0, 1.0),
+                Vector3D::new(1.0, 1.0, 1.0),
+            ),
+            Triangle::new(
+                Vector3D::new(0.0, 1.0, 0.0),
+                Vector3D::new(1.0, 1.0, 1.0),
+                Vector3D::new(1.0, 1.0, 0.0),
+            ),
+            // bottom
+            Triangle::new(
+                Vector3D::new(1.0, 0.0, 1.0),
+                Vector3D::new(0.0, 0.0, 1.0),
+                Vector3D::new(0.0, 0.0, 0.0),
+            ),
+            Triangle::new(
+                Vector3D::new(1.0, 0.0, 1.0),
+                Vector3D::new(0.0, 0.0, 0.0),
+                Vector3D::new(1.0, 0.0, 0.0),
+            ),
         ],
     };
 
@@ -83,39 +105,55 @@ fn main() {
 
     let mut frame_buffer = FrameBuffer::new(WIDTH, HEIGHT);
 
-    cube_mesh.triangles[0].vertices[1].print();
-    let proj_2d = cube_mesh.apply_transformation(&proj_mat);
-    proj_2d.triangles[0].vertices[1].print();
-    geometric_to_screen(&proj_2d.triangles[0].vertices[1], WIDTH, HEIGHT).print();
-
-    // let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     let mut window =
         Window::new("ATLAS", WIDTH, HEIGHT, WindowOptions::default()).unwrap_or_else(|e| {
             panic!("{}", e);
         });
 
     window.set_target_fps(60);
+    let white = Color {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    };
+
+    let mut theta: f64 = 0.0;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        let proj_2d = cube_mesh.apply_transformation(&proj_mat);
+        frame_buffer.clear();
+        theta += 0.03;
+
+        let mat_rot_z = Matrix4D::new([
+            [theta.cos(), theta.sin(), 0.0, 0.0],
+            [-theta.sin(), theta.cos(), 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+
+        let mat_rot_x = Matrix4D::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, (0.5 * theta).cos(), (0.5 * theta).sin(), 0.0],
+            [0.0, -(0.5 * theta).sin(), (theta * 0.5).cos(), 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+
+        let z_translator = Vector3D::new(0.0, 0.0, 3.0);
+        let proj_2d = cube_mesh
+            .apply_transformation(&mat_rot_z)
+            .apply_transformation(&mat_rot_x)
+            .translate(&z_translator)
+            .apply_transformation(&proj_mat);
 
         for triangle in proj_2d.triangles {
-            
+            let v1 = geometric_to_screen(&triangle.vertices[0], WIDTH, HEIGHT);
+            let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
+            let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
+
+            frame_buffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
+            frame_buffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
+            frame_buffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
         }
-
-
-        frame_buffer.drawline(
-            0,
-            0,
-            WIDTH as i32,
-            HEIGHT as i32,
-            &Color {
-                r: 255,
-                g: 255,
-                b: 255,
-                a: 255,
-            },
-        );
 
         window
             .update_with_buffer(
@@ -125,11 +163,4 @@ fn main() {
             )
             .unwrap();
     }
-
-    let u = linalg::Vector2D::new(1.0, 2.0);
-    let v = linalg::Vector2D::new(10.0, -22.0);
-
-    let o = u + v;
-
-    println!("{}, {}", o.x, o.y);
 }

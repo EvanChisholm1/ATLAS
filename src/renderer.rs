@@ -23,7 +23,15 @@ impl FrameBuffer {
             color_buffer: vec![0; width * height],
             depth_buffer: vec![0.0; width * height],
             width,
-            height
+            height,
+        }
+    }
+
+    pub fn clear(&mut self) {
+        let len = self.width * self.height;
+
+        for i in 0..len {
+            self.color_buffer[i] = 0;
         }
     }
 
@@ -55,7 +63,7 @@ impl FrameBuffer {
 
             let e2 = 2 * err;
             if e2 >= dy {
-                err +=  dy;
+                err += dy;
                 x1 += sx;
             }
 
@@ -66,9 +74,7 @@ impl FrameBuffer {
         }
     }
 
-    pub fn draw_triangle(&mut self, tri: &Triangle) {
-
-    }
+    pub fn draw_triangle(&mut self, tri: &Triangle) {}
 }
 
 pub struct Scene {
@@ -95,6 +101,24 @@ impl Mesh {
                     .iter()
                     .map(|v| multiply_matrix_vector(v, mat))
                     .collect();
+
+                Triangle {
+                    vertices: updated_vertices,
+                }
+            })
+            .collect();
+
+        Mesh {
+            triangles: updated_triangles,
+        }
+    }
+
+    pub fn translate(&self, translator: &Vector3D) -> Mesh {
+        let updated_triangles = self
+            .triangles
+            .iter()
+            .map(|t| {
+                let updated_vertices = t.vertices.iter().map(|v| v.add(translator)).collect();
 
                 Triangle {
                     vertices: updated_vertices,
