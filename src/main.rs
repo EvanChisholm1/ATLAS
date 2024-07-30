@@ -1,8 +1,8 @@
 use std::f64::consts::PI;
 
 use linalg::{Matrix4D, Vector2D, Vector3D};
-use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions, CursorStyle};
-use renderer::{Color, FrameBuffer, Mesh, Triangle};
+use minifb::{CursorStyle, Key, MouseButton, MouseMode, Window, WindowOptions};
+use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Scene, Triangle};
 
 mod linalg;
 pub mod renderer;
@@ -43,9 +43,6 @@ fn get_y_rotation_matrix(theta: f64) -> Matrix4D {
         [0.0, 0.0, 0.0, 1.0],
     ])
 }
-
-
-
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 360;
@@ -122,18 +119,40 @@ fn main() {
         ],
     };
 
+    // let cube_obj = Object {
+    //     mesh: cube_mesh,
+    //     transform: Matrix4D::new_translation(&Vector3D::new(0.0, 0.0, 3.0))
+    // };
+
+    // let scene = Scene {
+    //     objects: vec![cube_mesh, cube_2],
+    // };
+
     let f_near = 0.1;
     let f_far = 1000.0;
     let f_fov = 90.0;
     let f_aspect_ratio = HEIGHT as f64 / WIDTH as f64;
     let f_fov_rad = 1.0 / ((f_fov * 0.5 / 180.0 * 3.14159) as f64).tan();
 
-    let proj_mat = Matrix4D::new([
-        [f_aspect_ratio * f_fov_rad, 0.0, 0.0, 0.0],
-        [0.0, f_fov_rad, 0.0, 0.0],
-        [0.0, 0.0, f_far / (f_far - f_near), 1.0],
-        [0.0, 0.0, (-f_far * f_near) / (f_far - f_near), 0.0],
-    ]);
+    let mut cam = Camera {
+        position: Vector3D::new(0.0, 0.0, 0.0),
+        front: Vector3D::new(0.0, 0.0, -1.0),
+        up: Vector3D::new(0.0, 1.0, 0.0),
+        yaw: 0.0,
+        pitch: 0.0,
+        near_clip: f_near,
+        far_clip: f_far,
+        aspect_ratio: f_aspect_ratio,
+    };
+
+    let proj_mat = cam.get_proj_matrix(f_aspect_ratio, f_fov, f_near, f_far);
+
+    // let proj_mat = Matrix4D::new([
+    //     [f_aspect_ratio * f_fov_rad, 0.0, 0.0, 0.0],
+    //     [0.0, f_fov_rad, 0.0, 0.0],
+    //     [0.0, 0.0, f_far / (f_far - f_near), 1.0],
+    //     [0.0, 0.0, (-f_far * f_near) / (f_far - f_near), 0.0],
+    // ]);
 
     let mut frame_buffer = FrameBuffer::new(WIDTH, HEIGHT);
 
@@ -143,6 +162,7 @@ fn main() {
         });
 
     window.set_target_fps(60);
+
     let white = Color {
         r: 255,
         g: 255,
@@ -151,9 +171,9 @@ fn main() {
     };
 
     let mut theta: f64 = 0.0;
-    let mut cam_loc = Vector3D::new(0.0, 0.0, 3.0);
-    let mut cam_x_theta: f64 = 0.0;
-    let mut cam_y_theta: f64 = 0.0;
+    // let mut cam_loc = Vector3D::new(0.0, 0.0, 3.0);
+    // let mut cam_x_theta: f64 = 0.0;
+    // let mut cam_y_theta: f64 = 0.0;
 
     let mut prev_mouse_x = 0.0;
     let mut prev_mouse_y = 0.0;
@@ -161,6 +181,14 @@ fn main() {
     let mut has_initialized_mouse_pos = false;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        let mut input = Input {
+            backward: false,
+            forward: false,
+            left: false,
+            right: false,
+            mouse_dx: 0.0,
+            mouse_dy: 0.0,
+        };
 
         if let Some((x, y)) = window.get_mouse_pos(minifb::MouseMode::Pass) {
             if !has_initialized_mouse_pos {
@@ -172,37 +200,41 @@ fn main() {
             let delta_x = x - prev_mouse_x;
             let delta_y = y - prev_mouse_y;
 
-            cam_x_theta += -(delta_y * 0.01) as f64;
-            cam_y_theta += -(delta_x * 0.01) as f64;
-            // cam_y_theta = cam
-
-            cam_x_theta = cam_x_theta.clamp(-PI / 4.0, PI / 4.0);
+            input.mouse_dx = delta_x as f64;
+            input.mouse_dy = delta_y as f64;
 
             prev_mouse_x = x;
             prev_mouse_y = y;
         }
 
         if window.is_key_down(Key::A) {
-            cam_loc.x += 0.1;
+            input.left = true;
+            // cam_loc.x += 0.1;
         }
         if window.is_key_down(Key::D) {
-            cam_loc.x -= 0.1;
+            input.right = true;
+            // cam_loc.x -= 0.1;
         }
 
         if window.is_key_down(Key::W) {
-            cam_loc.z -= 0.1;
+            input.forward = true;
+            // cam_loc.z -= 0.1;
         }
         if window.is_key_down(Key::S) {
-            cam_loc.z += 0.1;
+            input.backward = true;
+            // cam_loc.z += 0.1;
         }
 
-        if window.is_key_down(Key::Space) {
-            cam_loc.y -= 0.1;
-        }
-        if window.is_key_down(Key::LeftCtrl) {
-            cam_loc.y += 0.1;
-        }
+        cam.update(&input, 0.01);
+        cam.position.print();
+        println!("pitch: {}, yaw: {}", cam.pitch, cam.yaw);
 
+        // if window.is_key_down(Key::Space) {
+        //     cam_loc.y -= 0.1;
+        // }
+        // if window.is_key_down(Key::LeftCtrl) {
+        //     cam_loc.y += 0.1;
+        // }
 
         frame_buffer.clear();
         theta += 0.03;
@@ -221,23 +253,33 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0],
         ]);
 
+        let view_matrix = cam.create_view_matrix();
+
         // let z_translator = Vector3D::new(0.0, 0.0, 3.0);
-        let proj_2d = cube_mesh
-            // .apply_transformation(&mat_rot_z)
-            // .apply_transformation(&mat_rot_x)
-            .translate(&cam_loc)
-            .apply_transformation(&get_x_rotation_matrix(cam_x_theta))
-            .apply_transformation(&get_y_rotation_matrix(cam_y_theta))
-            .apply_transformation(&proj_mat);
+        for i in 0..3 {
+            let proj_2d = cube_mesh
+                // .apply_transformation(&mat_rot_z)
+                // .apply_transformation(&mat_rot_x)
+                // .apply_transformation(&get_x_rotation_matrix(cam_x_theta))
+                // .apply_transformation(&get_y_rotation_matrix(cam_y_theta))
+                .translate(&Vector3D {
+                    x: i as f64,
+                    y: 0.0,
+                    z: 3.0,
+                })
+                // .translate(&cam.position.scale(-1.0))
+                .apply_transformation(&view_matrix)
+                .apply_transformation_with_perspective_div(&proj_mat);
 
-        for triangle in proj_2d.triangles {
-            let v1 = geometric_to_screen(&triangle.vertices[0], WIDTH, HEIGHT);
-            let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
-            let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
+            for triangle in proj_2d.triangles {
+                let v1 = geometric_to_screen(&triangle.vertices[0], WIDTH, HEIGHT);
+                let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
+                let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
 
-            frame_buffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
-            frame_buffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
-            frame_buffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
+                frame_buffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
+                frame_buffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
+                frame_buffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
+            }
         }
 
         window

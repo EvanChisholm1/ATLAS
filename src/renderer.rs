@@ -1,4 +1,5 @@
-use crate::linalg::{multiply_matrix_vector, Matrix4D, Vector3D};
+use crate::linalg::{cross, look_at_rh, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector3D};
+use std::f64::consts::PI;
 
 pub struct Renderer {
     scene: Scene,
@@ -78,12 +79,12 @@ impl FrameBuffer {
 }
 
 pub struct Scene {
-    objects: Vec<Object>,
+    pub objects: Vec<Object>,
 }
 
 pub struct Object {
-    mesh: Mesh,
-    transform: Transform,
+    pub mesh: Mesh,
+    pub transform: Matrix4D,
 }
 
 pub struct Mesh {
@@ -100,6 +101,28 @@ impl Mesh {
                     .vertices
                     .iter()
                     .map(|v| multiply_matrix_vector(v, mat))
+                    .collect();
+
+                Triangle {
+                    vertices: updated_vertices,
+                }
+            })
+            .collect();
+
+        Mesh {
+            triangles: updated_triangles,
+        }
+    }
+
+    pub fn apply_transformation_with_perspective_div(&self, mat: &Matrix4D) -> Mesh {
+        let updated_triangles = self
+            .triangles
+            .iter()
+            .map(|t| {
+                let updated_vertices = t
+                    .vertices
+                    .iter()
+                    .map(|v| multiply_matrix_vector_perspective_div(v, mat))
                     .collect();
 
                 Triangle {
@@ -148,11 +171,103 @@ impl Triangle {
 //     pub position: Vector3D,
 // }
 
+pub struct Input {
+    pub forward: bool,
+    pub backward: bool,
+    pub left: bool,
+    pub right: bool,
+    pub mouse_dx: f64,
+    pub mouse_dy: f64,
+}
+
 pub struct Camera {
-    position: Vector3D,
-    aspect_ration: f32,
-    near_clip: f32,
-    far_clip: f32,
+    pub position: Vector3D,
+    pub aspect_ratio: f64,
+    pub near_clip: f64,
+    pub far_clip: f64,
+    pub front: Vector3D,
+    pub up: Vector3D,
+    pub yaw: f64,
+    pub pitch: f64,
+}
+
+impl Camera {
+    pub fn update(&mut self, input: &Input, delta_time: f64) {
+        let mouse_sensitivity = 0.004;
+        self.yaw += input.mouse_dx * mouse_sensitivity;
+        self.pitch += input.mouse_dy * mouse_sensitivity;
+        self.pitch = self.pitch.clamp(-PI / 4.0, PI / 4.0);
+
+        self.front = Vector3D::new(
+            self.pitch.cos() * self.yaw.cos(),
+            self.pitch.sin(),
+            self.pitch.cos() * self.yaw.sin(),
+        )
+        .normalize();
+
+        let forward = Vector3D::new(self.front.x, 0.0, self.front.z).normalize();
+        forward.print();
+        let right = cross(&forward, &Vector3D::new(0.0, 1.0, 0.0)).normalize();
+
+        let mut movement = Vector3D::new(0.0, 0.0, 0.0);
+
+        if input.forward {
+            movement = movement.add(&forward);
+        }
+        if input.backward {
+            movement = movement.add(&forward.scale(-1.0));
+        }
+        if input.right {
+            movement = movement.add(&right);
+        }
+        if input.left {
+            movement = movement.add(&right.scale(-1.0));
+        }
+
+        if !movement.is_zero() {
+            movement = movement.normalize();
+        }
+
+        let move_speed = 10.0;
+        let speed = move_speed * delta_time;
+        self.position = self.position.add(&movement.scale(speed));
+    }
+
+    pub fn create_view_matrix(&self) -> Matrix4D {
+        // look_at_rh(&self.position, &(&self.position + &self.front), &self.up)
+        let (sin_ud, cos_ud) = self.yaw.sin_cos();
+        let (sin_lr, cos_lr) = self.pitch.sin_cos();
+
+        let rotation_ud = Matrix4D::new([
+            [cos_ud, 0.0, sin_ud, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [-sin_ud, 0.0, cos_ud, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+
+        let rotation_lr = Matrix4D::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, cos_lr, -sin_lr, 0.0],
+            [0.0, sin_lr, cos_lr, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
+
+
+        
+        // rotation_ud
+        &rotation_ud * &rotation_lr
+    }
+
+    pub fn get_proj_matrix(&self, aspect_ratio: f64, fov: f64, near: f64, far: f64) -> Matrix4D {
+        let fov_rad = fov.to_radians();
+
+        Matrix4D::new([
+            [aspect_ratio * fov_rad, 0.0, 0.0, 0.0],
+            [0.0, fov_rad, 0.0, 0.0],
+            [0.0, 0.0, far / (far - near), 1.0],
+            [0.0, 0.0, (-far * near) / (far - near), 0.0],
+        ])
+    }
 }
 
 pub struct Transform {}
@@ -165,10 +280,6 @@ pub struct Color {
 }
 
 impl Color {
-    // pub fn new(r: u8, g: u8, b: u8, a: u8) {
-    //     Color
-    // }
-
     pub fn to_u32(&self) -> u32 {
         let (r, g, b, a) = (self.r as u32, self.g as u32, self.b as u32, self.a as u32);
         (a << 24) | (r << 16) | (g << 8) | b

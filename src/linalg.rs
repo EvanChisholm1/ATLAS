@@ -71,8 +71,37 @@ impl Vector3D {
         }
     }
 
+    pub fn scale(&self, scalar: f64) -> Vector3D {
+        Vector3D {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
+        }
+    }
+
+    pub fn sub(&self, other: &Vector3D) -> Vector3D {
+        self.add(&other.scale(-1.0))
+    }
+
     pub fn print(&self) {
         println!("x: {}, y: {}, z: {}", self.x, self.y, self.z);
+    }
+
+    pub fn normalize(&self) -> Vector3D {
+        let mag = self.magnitude();
+        Vector3D {
+            x: self.x / mag,
+            y: self.y / mag,
+            z: self.z / mag,
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        if self.x == 0.0 && self.y == 0.0 && self.z == 0.0 {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -85,6 +114,22 @@ impl ops::Add<Vector3D> for Vector3D {
             y: self.y + rhs.y,
             z: self.z + rhs.z,
         }
+    }
+}
+
+impl ops::Add<&Vector3D> for &Vector3D {
+    type Output = Vector3D;
+
+    fn add(self, rhs: &Vector3D) -> Vector3D {
+        self.add(rhs)
+    }
+}
+
+impl ops::Sub<&Vector3D> for &Vector3D {
+    type Output = Vector3D;
+
+    fn sub(self, rhs: &Vector3D) -> Self::Output {
+        self.sub(rhs)
     }
 }
 
@@ -108,9 +153,40 @@ impl Matrix4D {
     pub fn new(m: [[f64; 4]; 4]) -> Self {
         Matrix4D { m }
     }
+
+    pub fn new_translation(translation: &Vector3D) -> Matrix4D {
+        Matrix4D::new([
+            [1.0, 0.0, 0.0, translation.x],
+            [0.0, 1.0, 0.0, translation.y],
+            [0.0, 0.0, 1.0, translation.z],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+    }
+
+    pub fn multiply(&self, other: &Matrix4D) -> Matrix4D {
+        let mut result = [[0.0; 4]; 4];
+
+        for i in 0..4 {
+            for j in 0..4 {
+                for k in 0..4 {
+                    result[i][j] += self.m[i][k] * other.m[k][j];
+                }
+            }
+        }
+
+        Matrix4D::new(result)
+    }
 }
 
-pub fn multiply_matrix_vector(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
+impl ops::Mul<&Matrix4D> for &Matrix4D {
+    type Output = Matrix4D;
+
+    fn mul(self, rhs: &Matrix4D) -> Self::Output {
+        self.multiply(rhs)
+    }
+}
+
+pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
     let mut out = Vector3D {
         x: v.x * mat.m[0][0] + v.y * mat.m[1][0] + v.z * mat.m[2][0] + mat.m[3][0],
         y: v.x * mat.m[0][1] + v.y * mat.m[1][1] + v.z * mat.m[2][1] + mat.m[3][1],
@@ -128,6 +204,14 @@ pub fn multiply_matrix_vector(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
     out
 }
 
+pub fn multiply_matrix_vector(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
+    Vector3D {
+        x: v.x * mat.m[0][0] + v.y * mat.m[1][0] + v.z * mat.m[2][0] + mat.m[3][0],
+        y: v.x * mat.m[0][1] + v.y * mat.m[1][1] + v.z * mat.m[2][1] + mat.m[3][1],
+        z: v.x * mat.m[0][2] + v.y * mat.m[1][2] + v.z * mat.m[2][2] + mat.m[3][2],
+    }
+}
+
 impl ops::Mul<Vector3D> for Matrix4D {
     type Output = Vector3D;
     fn mul(self, rhs: Vector3D) -> Self::Output {
@@ -141,4 +225,30 @@ impl ops::Mul<Matrix4D> for Vector3D {
     fn mul(self, rhs: Matrix4D) -> Self::Output {
         multiply_matrix_vector(&self, &rhs)
     }
+}
+
+pub fn cross(u: &Vector3D, v: &Vector3D) -> Vector3D {
+    Vector3D {
+        x: u.y * v.z - u.z * v.y,
+        y: -(u.x * v.z - u.z * v.x),
+        z: u.x * v.y - u.y * u.x,
+    }
+}
+
+pub fn look_at_rh(eye: &Vector3D, target: &Vector3D, up: &Vector3D) -> Matrix4D {
+    let z_axis = (eye - target).normalize();
+    let x_axis = cross(up, &z_axis).normalize();
+    let y_axis = cross(&z_axis, &x_axis);
+
+    let rotation_matrix = Matrix4D::new([
+        [x_axis.x, x_axis.y, x_axis.z, 0.0],
+        [y_axis.x, y_axis.y, y_axis.z, 0.0],
+        [z_axis.x, z_axis.y, z_axis.z, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]);
+
+    // let translation = Matrix4D::new_translation(&eye.scale(-1.0));
+
+    // &rotation_matrix * &translation
+    rotation_matrix
 }
