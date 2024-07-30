@@ -1,4 +1,4 @@
-use crate::linalg::{cross, look_at_rh, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector3D};
+use crate::linalg::{cross, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector3D};
 use std::f64::consts::PI;
 
 pub struct Renderer {
@@ -118,16 +118,20 @@ impl Mesh {
         let updated_triangles = self
             .triangles
             .iter()
-            .map(|t| {
-                let updated_vertices = t
+            .filter_map(|t| {
+                let updated_vertices: Vec<Vector3D> = t
                     .vertices
                     .iter()
-                    .map(|v| multiply_matrix_vector_perspective_div(v, mat))
+                    .filter_map(|v| multiply_matrix_vector_perspective_div(v, mat))
                     .collect();
 
-                Triangle {
-                    vertices: updated_vertices,
+                if updated_vertices.len() < 3 {
+                    return None
                 }
+
+                Some(Triangle {
+                    vertices: updated_vertices,
+                })
             })
             .collect();
 
@@ -198,18 +202,12 @@ impl Camera {
         self.pitch += input.mouse_dy * mouse_sensitivity;
         self.pitch = self.pitch.clamp(-PI / 4.0, PI / 4.0);
 
-        self.front = Vector3D::new(
-            self.pitch.cos() * self.yaw.cos(),
-            self.pitch.sin(),
-            self.pitch.cos() * self.yaw.sin(),
-        )
-        .normalize();
-
-        let forward = Vector3D::new(self.front.x, 0.0, self.front.z).normalize();
-        forward.print();
-        let right = cross(&forward, &Vector3D::new(0.0, 1.0, 0.0)).normalize();
-
+        let forward = Vector3D::new(self.yaw.sin(), 0.0, self.yaw.cos());
         let mut movement = Vector3D::new(0.0, 0.0, 0.0);
+
+        let right = cross(&Vector3D::new(0.0, 1.0, 0.0), &forward);
+        println!("right");
+        right.print();
 
         if input.forward {
             movement = movement.add(&forward);
@@ -234,7 +232,6 @@ impl Camera {
     }
 
     pub fn create_view_matrix(&self) -> Matrix4D {
-        // look_at_rh(&self.position, &(&self.position + &self.front), &self.up)
         let (sin_ud, cos_ud) = self.yaw.sin_cos();
         let (sin_lr, cos_lr) = self.pitch.sin_cos();
 
@@ -252,9 +249,6 @@ impl Camera {
             [0.0, 0.0, 0.0, 1.0],
         ]);
 
-
-        
-        // rotation_ud
         &rotation_ud * &rotation_lr
     }
 

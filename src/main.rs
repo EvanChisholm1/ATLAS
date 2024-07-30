@@ -267,7 +267,7 @@ fn main() {
                     y: 0.0,
                     z: 3.0,
                 })
-                // .translate(&cam.position.scale(-1.0))
+                .translate(&cam.position.scale(-1.0))
                 .apply_transformation(&view_matrix)
                 .apply_transformation_with_perspective_div(&proj_mat);
 

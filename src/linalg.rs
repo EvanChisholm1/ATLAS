@@ -186,7 +186,7 @@ impl ops::Mul<&Matrix4D> for &Matrix4D {
     }
 }
 
-pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
+pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> Option<Vector3D> {
     let mut out = Vector3D {
         x: v.x * mat.m[0][0] + v.y * mat.m[1][0] + v.z * mat.m[2][0] + mat.m[3][0],
         y: v.x * mat.m[0][1] + v.y * mat.m[1][1] + v.z * mat.m[2][1] + mat.m[3][1],
@@ -195,13 +195,17 @@ pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> V
 
     let w = v.x * mat.m[0][3] + v.y * mat.m[1][3] + v.z * mat.m[2][3] + mat.m[3][3];
 
+    if out.z < -w {
+        return None
+    }
+
     if w != 0.0 {
         out.x /= w;
         out.y /= w;
         out.z /= w;
     }
 
-    out
+    Some(out)
 }
 
 pub fn multiply_matrix_vector(v: &Vector3D, mat: &Matrix4D) -> Vector3D {
@@ -233,22 +237,4 @@ pub fn cross(u: &Vector3D, v: &Vector3D) -> Vector3D {
         y: -(u.x * v.z - u.z * v.x),
         z: u.x * v.y - u.y * u.x,
     }
-}
-
-pub fn look_at_rh(eye: &Vector3D, target: &Vector3D, up: &Vector3D) -> Matrix4D {
-    let z_axis = (eye - target).normalize();
-    let x_axis = cross(up, &z_axis).normalize();
-    let y_axis = cross(&z_axis, &x_axis);
-
-    let rotation_matrix = Matrix4D::new([
-        [x_axis.x, x_axis.y, x_axis.z, 0.0],
-        [y_axis.x, y_axis.y, y_axis.z, 0.0],
-        [z_axis.x, z_axis.y, z_axis.z, 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-    ]);
-
-    // let translation = Matrix4D::new_translation(&eye.scale(-1.0));
-
-    // &rotation_matrix * &translation
-    rotation_matrix
 }
