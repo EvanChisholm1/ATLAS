@@ -48,6 +48,7 @@ impl ops::Mul<f64> for Vector2D {
     }
 }
 
+#[derive(Clone)]
 pub struct Vector3D {
     pub x: f64,
     pub y: f64,
@@ -196,7 +197,7 @@ pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> O
     let w = v.x * mat.m[0][3] + v.y * mat.m[1][3] + v.z * mat.m[2][3] + mat.m[3][3];
 
     if out.z < -w {
-        return None
+        return None;
     }
 
     if w != 0.0 {

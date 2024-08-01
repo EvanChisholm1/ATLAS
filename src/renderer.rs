@@ -1,14 +1,74 @@
-use crate::linalg::{cross, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector3D};
-use std::f64::consts::PI;
+use std::cmp::{min, max};
+use crate::linalg::{
+    cross, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector2D, Vector3D
+};
+use std::{cmp::Ordering, f64::consts::PI};
 
 pub struct Renderer {
-    scene: Scene,
-    framebuffer: FrameBuffer,
-    camera: Camera,
+    // scene: Scene,
+    pub framebuffer: FrameBuffer,
+    pub camera: Camera,
 }
 
 impl Renderer {
-    fn render(&mut self) {}
+    // fn render(&mut self) {}
+
+    pub fn fill_triangle(&mut self, v1: &Vector2D, v2: &Vector2D, v3: &Vector2D) {
+
+        let mut vertices = vec![v1, v2, v3];
+        vertices.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+
+        let v1 = vertices[0];
+        let v2 = vertices[1];
+        let v3 = vertices[2];
+
+        let slope_1 = (v3.x - v1.x) / (v3.y - v1.y);
+        let slope_2 = (v2.x - v1.x) / (v2.y - v1.y);
+        let slope_3 = (v3.x - v2.x) / (v3.y - v2.y);
+
+        let mut x1 = v1.x;
+        let mut x2 = v1.x;
+
+        for y in (v1.y as i32)..=(v2.y as i32) {
+            if (y as usize) < self.framebuffer.height {
+                self.draw_scanline(x1 as i32, x2 as i32, y);
+            }
+            x1 += slope_1;
+            x2 += slope_2;
+        }
+
+        x2 = v2.x;
+
+
+        for y in (v2.y as i32)..=(v3.y as i32) {
+            if (y as usize) < self.framebuffer.height {
+                self.draw_scanline(x1 as i32, x2 as i32, y);
+            }
+            x1 += slope_1;
+            x2 += slope_3;
+        }
+
+
+    }
+
+    pub fn draw_scanline(&mut self, x1: i32, x2: i32, y: i32) {
+
+        let start = max(0, min(x1, x2));
+        let end = min(self.framebuffer.width as i32, max(x1, x2));
+        for x in start..end {
+            self.framebuffer.set_pixel(
+                x as usize,
+                y as usize,
+                &Color {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                    a: 255,
+                },
+                0.0,
+            );
+        }
+    }
 }
 
 pub struct FrameBuffer {
@@ -37,6 +97,14 @@ impl FrameBuffer {
     }
 
     pub fn set_pixel(&mut self, x: usize, y: usize, color: &Color, depth: f32) {
+        if x > self.width ||  y > self.height {
+            return;
+        }
+
+        if y * self.width +  x >= self.width * self.height {
+            return;
+        }
+
         self.color_buffer[y * self.width + x] = color.to_u32();
         self.depth_buffer[y * self.width + x] = depth;
     }
@@ -126,7 +194,7 @@ impl Mesh {
                     .collect();
 
                 if updated_vertices.len() < 3 {
-                    return None
+                    return None;
                 }
 
                 Some(Triangle {
@@ -180,6 +248,8 @@ pub struct Input {
     pub backward: bool,
     pub left: bool,
     pub right: bool,
+    pub up: bool,
+    pub down: bool,
     pub mouse_dx: f64,
     pub mouse_dy: f64,
 }
@@ -205,9 +275,8 @@ impl Camera {
         let forward = Vector3D::new(self.yaw.sin(), 0.0, self.yaw.cos());
         let mut movement = Vector3D::new(0.0, 0.0, 0.0);
 
-        let right = cross(&Vector3D::new(0.0, 1.0, 0.0), &forward);
-        println!("right");
-        right.print();
+        let right_yaw = self.yaw + PI / 2.0;
+        let right = Vector3D::new(right_yaw.sin(), 0.0, right_yaw.cos());
 
         if input.forward {
             movement = movement.add(&forward);
@@ -224,6 +293,13 @@ impl Camera {
 
         if !movement.is_zero() {
             movement = movement.normalize();
+        }
+
+        if input.up {
+            movement = movement.add(&Vector3D::new(0.0, 1.0, 0.0));
+        }
+        if input.down {
+            movement = movement.add(&Vector3D::new(0.0, -1.0, 0.0));
         }
 
         let move_speed = 10.0;
@@ -263,8 +339,6 @@ impl Camera {
         ])
     }
 }
-
-pub struct Transform {}
 
 pub struct Color {
     pub r: u8,

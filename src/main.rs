@@ -1,8 +1,6 @@
-use std::f64::consts::PI;
-
 use linalg::{Matrix4D, Vector2D, Vector3D};
-use minifb::{CursorStyle, Key, MouseButton, MouseMode, Window, WindowOptions};
-use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Scene, Triangle};
+use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
+use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Renderer, Scene, Triangle};
 
 mod linalg;
 pub mod renderer;
@@ -44,8 +42,8 @@ fn get_y_rotation_matrix(theta: f64) -> Matrix4D {
     ])
 }
 
-const WIDTH: usize = 640;
-const HEIGHT: usize = 360;
+const WIDTH: usize = 1280;
+const HEIGHT: usize = 720;
 
 fn main() {
     let cube_mesh: Mesh = Mesh {
@@ -119,20 +117,10 @@ fn main() {
         ],
     };
 
-    // let cube_obj = Object {
-    //     mesh: cube_mesh,
-    //     transform: Matrix4D::new_translation(&Vector3D::new(0.0, 0.0, 3.0))
-    // };
-
-    // let scene = Scene {
-    //     objects: vec![cube_mesh, cube_2],
-    // };
-
     let f_near = 0.1;
     let f_far = 1000.0;
     let f_fov = 90.0;
     let f_aspect_ratio = HEIGHT as f64 / WIDTH as f64;
-    let f_fov_rad = 1.0 / ((f_fov * 0.5 / 180.0 * 3.14159) as f64).tan();
 
     let mut cam = Camera {
         position: Vector3D::new(0.0, 0.0, 0.0),
@@ -146,15 +134,12 @@ fn main() {
     };
 
     let proj_mat = cam.get_proj_matrix(f_aspect_ratio, f_fov, f_near, f_far);
-
-    // let proj_mat = Matrix4D::new([
-    //     [f_aspect_ratio * f_fov_rad, 0.0, 0.0, 0.0],
-    //     [0.0, f_fov_rad, 0.0, 0.0],
-    //     [0.0, 0.0, f_far / (f_far - f_near), 1.0],
-    //     [0.0, 0.0, (-f_far * f_near) / (f_far - f_near), 0.0],
-    // ]);
-
     let mut frame_buffer = FrameBuffer::new(WIDTH, HEIGHT);
+
+    let mut renderer = Renderer {
+        camera: cam,
+        framebuffer: frame_buffer,
+    };
 
     let mut window =
         Window::new("ATLAS", WIDTH, HEIGHT, WindowOptions::default()).unwrap_or_else(|e| {
@@ -171,9 +156,6 @@ fn main() {
     };
 
     let mut theta: f64 = 0.0;
-    // let mut cam_loc = Vector3D::new(0.0, 0.0, 3.0);
-    // let mut cam_x_theta: f64 = 0.0;
-    // let mut cam_y_theta: f64 = 0.0;
 
     let mut prev_mouse_x = 0.0;
     let mut prev_mouse_y = 0.0;
@@ -186,6 +168,8 @@ fn main() {
             forward: false,
             left: false,
             right: false,
+            up: false,
+            down: false,
             mouse_dx: 0.0,
             mouse_dy: 0.0,
         };
@@ -209,34 +193,28 @@ fn main() {
 
         if window.is_key_down(Key::A) {
             input.left = true;
-            // cam_loc.x += 0.1;
         }
         if window.is_key_down(Key::D) {
             input.right = true;
-            // cam_loc.x -= 0.1;
         }
 
         if window.is_key_down(Key::W) {
             input.forward = true;
-            // cam_loc.z -= 0.1;
         }
         if window.is_key_down(Key::S) {
             input.backward = true;
-            // cam_loc.z += 0.1;
         }
 
-        cam.update(&input, 0.01);
-        cam.position.print();
-        println!("pitch: {}, yaw: {}", cam.pitch, cam.yaw);
+        if window.is_key_down(Key::Space) {
+            input.up = true;
+        }
+        if window.is_key_down(Key::LeftCtrl) {
+            input.down = true;
+        }
 
-        // if window.is_key_down(Key::Space) {
-        //     cam_loc.y -= 0.1;
-        // }
-        // if window.is_key_down(Key::LeftCtrl) {
-        //     cam_loc.y += 0.1;
-        // }
+        renderer.camera.update(&input, 0.01);
 
-        frame_buffer.clear();
+        renderer.framebuffer.clear();
         theta += 0.03;
 
         let mat_rot_z = Matrix4D::new([
@@ -253,9 +231,8 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0],
         ]);
 
-        let view_matrix = cam.create_view_matrix();
+        let view_matrix = renderer.camera.create_view_matrix();
 
-        // let z_translator = Vector3D::new(0.0, 0.0, 3.0);
         for i in 0..3 {
             let proj_2d = cube_mesh
                 // .apply_transformation(&mat_rot_z)
@@ -267,26 +244,40 @@ fn main() {
                     y: 0.0,
                     z: 3.0,
                 })
-                .translate(&cam.position.scale(-1.0))
+                .translate(&renderer.camera.position.scale(-1.0))
                 .apply_transformation(&view_matrix)
                 .apply_transformation_with_perspective_div(&proj_mat);
 
+            renderer.draw_scanline(5, 500, 200);
             for triangle in proj_2d.triangles {
+                // let mut on_screen = true;
+                // renderer.fill_triangle(&triangle);
+
                 let v1 = geometric_to_screen(&triangle.vertices[0], WIDTH, HEIGHT);
                 let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
                 let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
 
-                frame_buffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
-                frame_buffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
-                frame_buffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
+                renderer.framebuffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
+                renderer.framebuffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
+                renderer.framebuffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
+
+                // let vertices_2d = vec![v1, v2, v3].iter().map(|v| Vector3D::new(v.x as f64, v.y as f64, 0.0)).collect();
+
+                // let tri_2d = Triangle {
+                //     vertices: vertices_2d,
+                // };
+
+                renderer.fill_triangle(&v1, &v2, &v3);
+
+
             }
         }
 
         window
             .update_with_buffer(
-                &frame_buffer.color_buffer,
-                frame_buffer.width,
-                frame_buffer.height,
+                &renderer.framebuffer.color_buffer,
+                renderer.framebuffer.width,
+                renderer.framebuffer.height,
             )
             .unwrap();
     }
