@@ -13,7 +13,7 @@ pub struct Renderer {
 impl Renderer {
     // fn render(&mut self) {}
 
-    pub fn fill_triangle(&mut self, v1: &Vector2D, v2: &Vector2D, v3: &Vector2D) {
+    pub fn fill_triangle(&mut self, v1: &Vector2D, v2: &Vector2D, v3: &Vector2D, color: &Color) {
 
         let mut vertices = vec![v1, v2, v3];
         vertices.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
@@ -31,7 +31,7 @@ impl Renderer {
 
         for y in (v1.y as i32)..=(v2.y as i32) {
             if (y as usize) < self.framebuffer.height {
-                self.draw_scanline(x1 as i32, x2 as i32, y);
+                self.draw_scanline(x1 as i32, x2 as i32, y, color);
             }
             x1 += slope_1;
             x2 += slope_2;
@@ -42,7 +42,7 @@ impl Renderer {
 
         for y in (v2.y as i32)..=(v3.y as i32) {
             if (y as usize) < self.framebuffer.height {
-                self.draw_scanline(x1 as i32, x2 as i32, y);
+                self.draw_scanline(x1 as i32, x2 as i32, y, color);
             }
             x1 += slope_1;
             x2 += slope_3;
@@ -51,7 +51,7 @@ impl Renderer {
 
     }
 
-    pub fn draw_scanline(&mut self, x1: i32, x2: i32, y: i32) {
+    pub fn draw_scanline(&mut self, x1: i32, x2: i32, y: i32, color: &Color) {
 
         let start = max(0, min(x1, x2));
         let end = min(self.framebuffer.width as i32, max(x1, x2));
@@ -59,12 +59,7 @@ impl Renderer {
             self.framebuffer.set_pixel(
                 x as usize,
                 y as usize,
-                &Color {
-                    r: 255,
-                    g: 255,
-                    b: 255,
-                    a: 255,
-                },
+                color,
                 0.0,
             );
         }
@@ -173,6 +168,7 @@ impl Mesh {
 
                 Triangle {
                     vertices: updated_vertices,
+                    color: t.color.clone(),
                 }
             })
             .collect();
@@ -199,6 +195,7 @@ impl Mesh {
 
                 Some(Triangle {
                     vertices: updated_vertices,
+                    color: t.color.clone(),
                 })
             })
             .collect();
@@ -217,6 +214,7 @@ impl Mesh {
 
                 Triangle {
                     vertices: updated_vertices,
+                    color: t.color.clone(),
                 }
             })
             .collect();
@@ -229,12 +227,14 @@ impl Mesh {
 
 pub struct Triangle {
     pub vertices: Vec<Vector3D>,
+    pub color: Color,
 }
 
 impl Triangle {
-    pub fn new(a: Vector3D, b: Vector3D, c: Vector3D) -> Self {
+    pub fn new(a: Vector3D, b: Vector3D, c: Vector3D, color: &Color) -> Self {
         Triangle {
             vertices: vec![a, b, c],
+            color: color.clone(),
         }
     }
 }
@@ -340,6 +340,7 @@ impl Camera {
     }
 }
 
+#[derive(Clone)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -348,6 +349,15 @@ pub struct Color {
 }
 
 impl Color {
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Color {
+        Color {
+            r,
+            g,
+            b,
+            a
+        }
+    }
+
     pub fn to_u32(&self) -> u32 {
         let (r, g, b, a) = (self.r as u32, self.g as u32, self.b as u32, self.a as u32);
         (a << 24) | (r << 16) | (g << 8) | b

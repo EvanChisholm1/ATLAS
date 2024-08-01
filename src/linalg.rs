@@ -232,6 +232,10 @@ impl ops::Mul<Matrix4D> for Vector3D {
     }
 }
 
+pub fn dot(u: &Vector3D, v: & Vector3D) -> f64 {
+    return u.x * v.x + u.y * v.y + u.z * v.z;
+}
+
 pub fn cross(u: &Vector3D, v: &Vector3D) -> Vector3D {
     Vector3D {
         x: u.y * v.z - u.z * v.y,

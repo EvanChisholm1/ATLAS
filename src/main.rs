@@ -46,6 +46,15 @@ const WIDTH: usize = 1280;
 const HEIGHT: usize = 720;
 
 fn main() {
+    let white = Color {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    };
+
+    let gray = Color::new(128, 128, 128, 255);
+
     let cube_mesh: Mesh = Mesh {
         triangles: vec![
             // south
@@ -53,66 +62,78 @@ fn main() {
                 Vector3D::new(0.0, 0.0, 0.0),
                 Vector3D::new(0.0, 1.0, 0.0),
                 Vector3D::new(1.0, 1.0, 0.0),
+                &gray,
             ),
             Triangle::new(
                 Vector3D::new(0.0, 0.0, 0.0),
                 Vector3D::new(1.0, 1.0, 0.0),
                 Vector3D::new(1.0, 0.0, 0.0),
+                &gray,
             ),
             // east
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 0.0),
                 Vector3D::new(1.0, 1.0, 0.0),
                 Vector3D::new(1.0, 1.0, 1.0),
+                &gray,
             ),
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 0.0),
                 Vector3D::new(1.0, 1.0, 1.0),
                 Vector3D::new(1.0, 0.0, 1.0),
+                &gray,
             ),
             // north
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 1.0),
                 Vector3D::new(1.0, 1.0, 1.0),
                 Vector3D::new(0.0, 1.0, 1.0),
+                &gray,
             ),
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 1.0),
                 Vector3D::new(0.0, 1.0, 1.0),
                 Vector3D::new(0.0, 0.0, 1.0),
+                &gray,
             ),
             // west
             Triangle::new(
                 Vector3D::new(0.0, 0.0, 1.0),
                 Vector3D::new(0.0, 1.0, 1.0),
                 Vector3D::new(0.0, 1.0, 0.0),
+                &gray,
             ),
             Triangle::new(
                 Vector3D::new(0.0, 0.0, 1.0),
                 Vector3D::new(0.0, 1.0, 0.0),
                 Vector3D::new(0.0, 0.0, 0.0),
+                &gray,
             ),
             // top
             Triangle::new(
                 Vector3D::new(0.0, 1.0, 0.0),
                 Vector3D::new(0.0, 1.0, 1.0),
                 Vector3D::new(1.0, 1.0, 1.0),
+                &white,
             ),
             Triangle::new(
                 Vector3D::new(0.0, 1.0, 0.0),
                 Vector3D::new(1.0, 1.0, 1.0),
                 Vector3D::new(1.0, 1.0, 0.0),
+                &white,
             ),
             // bottom
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 1.0),
                 Vector3D::new(0.0, 0.0, 1.0),
                 Vector3D::new(0.0, 0.0, 0.0),
+                &white,
             ),
             Triangle::new(
                 Vector3D::new(1.0, 0.0, 1.0),
                 Vector3D::new(0.0, 0.0, 0.0),
                 Vector3D::new(1.0, 0.0, 0.0),
+                &white,
             ),
         ],
     };
@@ -248,7 +269,6 @@ fn main() {
                 .apply_transformation(&view_matrix)
                 .apply_transformation_with_perspective_div(&proj_mat);
 
-            renderer.draw_scanline(5, 500, 200);
             for triangle in proj_2d.triangles {
                 // let mut on_screen = true;
                 // renderer.fill_triangle(&triangle);
@@ -267,7 +287,7 @@ fn main() {
                 //     vertices: vertices_2d,
                 // };
 
-                renderer.fill_triangle(&v1, &v2, &v3);
+                renderer.fill_triangle(&v1, &v2, &v3, &triangle.color);
 
 
             }
