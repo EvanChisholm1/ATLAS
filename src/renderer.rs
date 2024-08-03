@@ -1,7 +1,8 @@
-use std::cmp::{min, max};
 use crate::linalg::{
-    cross, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector2D, Vector3D
+    cross, multiply_matrix_vector, multiply_matrix_vector_perspective_div, Matrix4D, Vector2D,
+    Vector3D,
 };
+use std::cmp::{max, min};
 use std::{cmp::Ordering, f64::consts::PI};
 
 pub struct Renderer {
@@ -14,7 +15,6 @@ impl Renderer {
     // fn render(&mut self) {}
 
     pub fn fill_triangle(&mut self, v1: &Vector2D, v2: &Vector2D, v3: &Vector2D, color: &Color) {
-
         let mut vertices = vec![v1, v2, v3];
         vertices.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
 
@@ -39,7 +39,6 @@ impl Renderer {
 
         x2 = v2.x;
 
-
         for y in (v2.y as i32)..=(v3.y as i32) {
             if (y as usize) < self.framebuffer.height {
                 self.draw_scanline(x1 as i32, x2 as i32, y, color);
@@ -47,21 +46,14 @@ impl Renderer {
             x1 += slope_1;
             x2 += slope_3;
         }
-
-
     }
 
     pub fn draw_scanline(&mut self, x1: i32, x2: i32, y: i32, color: &Color) {
-
         let start = max(0, min(x1, x2));
         let end = min(self.framebuffer.width as i32, max(x1, x2));
         for x in start..end {
-            self.framebuffer.set_pixel(
-                x as usize,
-                y as usize,
-                color,
-                0.0,
-            );
+            self.framebuffer
+                .set_pixel(x as usize, y as usize, color, 0.0);
         }
     }
 }
@@ -92,11 +84,11 @@ impl FrameBuffer {
     }
 
     pub fn set_pixel(&mut self, x: usize, y: usize, color: &Color, depth: f32) {
-        if x > self.width ||  y > self.height {
+        if x > self.width || y > self.height {
             return;
         }
 
-        if y * self.width +  x >= self.width * self.height {
+        if y * self.width + x >= self.width * self.height {
             return;
         }
 
@@ -350,12 +342,7 @@ pub struct Color {
 
 impl Color {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Color {
-        Color {
-            r,
-            g,
-            b,
-            a
-        }
+        Color { r, g, b, a }
     }
 
     pub fn to_u32(&self) -> u32 {

@@ -4,6 +4,7 @@ use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Renderer, Scene,
 
 mod linalg;
 pub mod renderer;
+pub mod vector;
 
 fn geometric_to_screen(vec: &Vector3D, width: usize, height: usize) -> Vector2D {
     let x_screen = (vec.x + 1.0) * (width as f64) / 2.0;
@@ -13,6 +14,24 @@ fn geometric_to_screen(vec: &Vector3D, width: usize, height: usize) -> Vector2D 
         x: x_screen,
         y: y_screen,
     }
+}
+
+/*
+   xs = (gx + 1) * width / 2.0
+   xs * 2.0 / width = gx + 1
+   xs * 2.0 / width - 1 = gx
+
+   ys = (1.0 - yg) * height / 2.0
+   ys * 2.0 / height = (1.0 - yg)
+   ys * 2.0 / height - 1.0 = - yg
+   -(ys * 2.0 / height - 1.0) = yg
+*/
+
+fn screen_to_geo(x: i32, y: i32, width: usize, height: usize) -> Vector2D {
+    let x_geo = ((x as f64 * 2.0) / width as f64) - 1.0;
+    let y_geo = -(y as f64 * 2.0 / height as f64 - 1.0);
+
+    Vector2D { x: x_geo, y: y_geo }
 }
 
 fn get_z_rotation_matrix(theta: f64) -> Matrix4D {
@@ -277,9 +296,27 @@ fn main() {
                 let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
                 let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
 
-                renderer.framebuffer.drawline(v1.x as i32, v1.y as i32, v2.x as i32, v2.y as i32, &white);
-                renderer.framebuffer.drawline(v2.x as i32, v2.y as i32, v3.x as i32, v3.y as i32, &white);
-                renderer.framebuffer.drawline(v3.x as i32, v3.y as i32, v1.x as i32, v1.y as i32, &white);
+                renderer.framebuffer.drawline(
+                    v1.x as i32,
+                    v1.y as i32,
+                    v2.x as i32,
+                    v2.y as i32,
+                    &white,
+                );
+                renderer.framebuffer.drawline(
+                    v2.x as i32,
+                    v2.y as i32,
+                    v3.x as i32,
+                    v3.y as i32,
+                    &white,
+                );
+                renderer.framebuffer.drawline(
+                    v3.x as i32,
+                    v3.y as i32,
+                    v1.x as i32,
+                    v1.y as i32,
+                    &white,
+                );
 
                 // let vertices_2d = vec![v1, v2, v3].iter().map(|v| Vector3D::new(v.x as f64, v.y as f64, 0.0)).collect();
 
@@ -288,8 +325,6 @@ fn main() {
                 // };
 
                 renderer.fill_triangle(&v1, &v2, &v3, &triangle.color);
-
-
             }
         }
 
