@@ -93,9 +93,31 @@ where
         .unwrap()
 }
 
-pub fn cross<T>(u: &Vector<T, 3>, v: &Vector<T, 3>) -> T
+macro_rules! impl_vector_methods {
+    ($($N:expr => { $($field:ident : $index:expr),+ }),+) => {
+        $(
+            impl<T> Vector<T, $N>
+            where
+                T: VectorElement,
+            {
+                $(
+                    pub fn $field(&self) -> T {
+                        self.data[$index]
+                    }
+                )+
+            }
+        )+
+    };
+}
+
+impl_vector_methods! {
+    2 => {x: 0, y: 1},
+    3 => {x: 0, y: 1, z: 2},
+    4 => {x: 0, y: 1, z: 2, w: 3}
+}
+
+pub fn cross<T>(u: &Vector<T, 3>, v: &Vector<T, 3>) -> Vector<T, 3>
 where
     T: VectorElement,
 {
-
 }
