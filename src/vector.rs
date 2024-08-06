@@ -1,14 +1,14 @@
 use std::{
     fmt::Debug,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Div, Mul, Sub, Neg},
 };
 
 pub trait VectorElement:
-    Copy + Debug + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> + Div<Output = Self>
+    Copy + Debug + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> + Div<Output = Self> + Neg<Output = Self>
 {
 }
 impl<T> VectorElement for T where
-    T: Copy + Debug + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T>
+    T: Copy + Debug + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Neg<Output = Self>
 {
 }
 
@@ -120,4 +120,9 @@ pub fn cross<T>(u: &Vector<T, 3>, v: &Vector<T, 3>) -> Vector<T, 3>
 where
     T: VectorElement,
 {
+    Vector::<T, 3>::new([
+        u.y() * v.z() - u.z() * v.y(), 
+        -(u.x() * v.z() - u.z() * v.x()),
+        u.x() * v.y() - u.y() * v.x()
+    ])
 }
