@@ -5,6 +5,7 @@ use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Renderer, Scene,
 mod linalg;
 pub mod renderer;
 pub mod vector;
+pub mod zbuf;
 
 fn geometric_to_screen(vec: &Vector3D, width: usize, height: usize) -> Vector2D {
     let x_screen = (vec.x + 1.0) * (width as f64) / 2.0;
