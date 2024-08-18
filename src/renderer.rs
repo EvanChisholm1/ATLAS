@@ -50,8 +50,9 @@ impl Renderer {
 
     pub fn draw_scanline(&mut self, x1: i32, x2: i32, y: i32, color: &Color) {
         let start = max(0, min(x1, x2));
-        let end = min(self.framebuffer.width as i32, max(x1, x2));
-        for x in start..end {
+        let end = min((self.framebuffer.width - 1) as i32, max(x1, x2));
+
+        for x in start..(end+1) {
             self.framebuffer
                 .set_pixel(x as usize, y as usize, color, 0.0);
         }
