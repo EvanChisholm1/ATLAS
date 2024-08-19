@@ -31,7 +31,7 @@ impl Renderer {
 
         for y in (v1.y as i32)..=(v2.y as i32) {
             if (y as usize) < self.framebuffer.height {
-                self.draw_scanline(x1 as i32, x2 as i32, y, color);
+                self.draw_scanline(x1.round() as i32, x2.round() as i32, y, color);
             }
             x1 += slope_1;
             x2 += slope_2;
@@ -41,7 +41,8 @@ impl Renderer {
 
         for y in (v2.y as i32)..=(v3.y as i32) {
             if (y as usize) < self.framebuffer.height {
-                self.draw_scanline(x1 as i32, x2 as i32, y, color);
+                self.draw_scanline(x1.round() as i32, x2.round() as i32, y, color);
+                // self.draw_scanline(x1 as i32, x2 as i32, y, color);
             }
             x1 += slope_1;
             x2 += slope_3;
