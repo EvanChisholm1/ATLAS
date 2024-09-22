@@ -5,6 +5,13 @@ use crate::linalg::{
 use std::cmp::{max, min};
 use std::{cmp::Ordering, f64::consts::PI};
 
+fn screen_to_geo(x: i32, y: i32, width: usize, height: usize) -> Vector2D {
+    let x_geo = ((x as f64 * 2.0) / width as f64) - 1.0;
+    let y_geo = -(y as f64 * 2.0 / height as f64 - 1.0);
+
+    Vector2D { x: x_geo, y: y_geo }
+}
+
 pub struct Renderer {
     // scene: Scene,
     pub framebuffer: FrameBuffer,
@@ -62,9 +69,10 @@ impl Renderer {
 
 pub struct FrameBuffer {
     pub color_buffer: Vec<u32>,
-    pub depth_buffer: Vec<f32>,
+    pub depth_buffer: Vec<f64>,
     pub width: usize,
     pub height: usize,
+    pub depth_func: Box<dyn Fn(f64, f64) -> f64>,
 }
 
 impl FrameBuffer {
@@ -74,6 +82,7 @@ impl FrameBuffer {
             depth_buffer: vec![0.0; width * height],
             width,
             height,
+            depth_func: Box::new(|x: f64, y: f64| 0.0),
         }
     }
 
@@ -82,6 +91,7 @@ impl FrameBuffer {
 
         for i in 0..len {
             self.color_buffer[i] = 0;
+            self.depth_buffer[i] = 10000.0;
         }
     }
 
@@ -90,12 +100,17 @@ impl FrameBuffer {
             return;
         }
 
+        let clip_coords = screen_to_geo(x as i32, y as i32, self.width, self.height);
+        let d = (self.depth_func)(clip_coords.x, clip_coords.y);
+
         if y * self.width + x >= self.width * self.height {
             return;
         }
 
-        self.color_buffer[y * self.width + x] = color.to_u32();
-        self.depth_buffer[y * self.width + x] = depth;
+        if d < self.depth_buffer[y * self.width + x] {
+            self.depth_buffer[y * self.width + x] = d;
+            self.color_buffer[y * self.width + x] = color.to_u32();
+        }
     }
 
     pub fn drawline(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, color: &Color) {
@@ -132,7 +147,9 @@ impl FrameBuffer {
         }
     }
 
-    pub fn draw_triangle(&mut self, tri: &Triangle) {}
+    pub fn draw_triangle(&mut self, tri: &Triangle) {
+
+    }
 }
 
 pub struct Scene {
@@ -330,6 +347,17 @@ impl Camera {
             [0.0, fov_rad, 0.0, 0.0],
             [0.0, 0.0, far / (far - near), 1.0],
             [0.0, 0.0, (-far * near) / (far - near), 0.0],
+        ])
+    }
+
+    pub fn get_inverse_proj_matrix (&self, aspect_ratio: f64, fov: f64, near: f64, far: f64) -> Matrix4D {
+        let fov_rad = fov.to_radians();
+
+        Matrix4D::new([
+            [1.0 / (aspect_ratio * fov_rad), 0.0, 0.0, 0.0],
+            [0.0, 1.0 / fov_rad, 0.0, 0.0],
+            [0.0, 0.0, 0.0, (far - near) / -(far * near)],
+            [0.0, 0.0, 1.0, far/(far-near)]
         ])
     }
 }

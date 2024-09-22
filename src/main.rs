@@ -1,6 +1,7 @@
 use linalg::{Matrix4D, Vector2D, Vector3D};
 use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
 use renderer::{Camera, Color, FrameBuffer, Input, Mesh, Object, Renderer, Scene, Triangle};
+use zbuf::get_depth_func;
 
 mod linalg;
 pub mod renderer;
@@ -66,6 +67,14 @@ const WIDTH: usize = 1280;
 const HEIGHT: usize = 720;
 
 fn main() {
+    let screen_coords = Vector2D::new(1280.0, 10.0);
+    println!("{}, {}", screen_coords.x, screen_coords.y);
+    let geo_coords = screen_to_geo(screen_coords.x as i32, screen_coords.y as i32, WIDTH, HEIGHT);
+    println!("{}, {}", geo_coords.x, geo_coords.y);
+    let intermediate = Vector3D::new(geo_coords.x, geo_coords.y, 0.0);
+    let screen_coords2 = geometric_to_screen(&intermediate, WIDTH, HEIGHT);
+    println!("{}, {}", screen_coords2.x, screen_coords2.y);
+
     let white = Color {
         r: 255,
         g: 255,
@@ -293,37 +302,41 @@ fn main() {
                 // let mut on_screen = true;
                 // renderer.fill_triangle(&triangle);
 
+                let depth = get_depth_func(&triangle);
+                renderer.framebuffer.depth_func = Box::new(depth);
+
                 let v1 = geometric_to_screen(&triangle.vertices[0], WIDTH, HEIGHT);
                 let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
                 let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
 
-                renderer.framebuffer.drawline(
-                    v1.x as i32,
-                    v1.y as i32,
-                    v2.x as i32,
-                    v2.y as i32,
-                    &white,
-                );
-                renderer.framebuffer.drawline(
-                    v2.x as i32,
-                    v2.y as i32,
-                    v3.x as i32,
-                    v3.y as i32,
-                    &white,
-                );
-                renderer.framebuffer.drawline(
-                    v3.x as i32,
-                    v3.y as i32,
-                    v1.x as i32,
-                    v1.y as i32,
-                    &white,
-                );
+                // renderer.framebuffer.drawline(
+                //     v1.x as i32,
+                //     v1.y as i32,
+                //     v2.x as i32,
+                //     v2.y as i32,
+                //     &white,
+                // );
+                // renderer.framebuffer.drawline(
+                //     v2.x as i32,
+                //     v2.y as i32,
+                //     v3.x as i32,
+                //     v3.y as i32,
+                //     &white,
+                // );
+                // renderer.framebuffer.drawline(
+                //     v3.x as i32,
+                //     v3.y as i32,
+                //     v1.x as i32,
+                //     v1.y as i32,
+                //     &white,
+                // );
 
                 // let vertices_2d = vec![v1, v2, v3].iter().map(|v| Vector3D::new(v.x as f64, v.y as f64, 0.0)).collect();
 
                 // let tri_2d = Triangle {
                 //     vertices: vertices_2d,
                 // };
+                // println!("{}", triangle.vertices[0].z);
 
                 renderer.fill_triangle(&v1, &v2, &v3, &triangle.color);
             }
