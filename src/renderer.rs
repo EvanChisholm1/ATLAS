@@ -60,7 +60,7 @@ impl Renderer {
         let start = max(0, min(x1, x2));
         let end = min((self.framebuffer.width - 1) as i32, max(x1, x2));
 
-        for x in start..(end+1) {
+        for x in start..(end + 1) {
             self.framebuffer
                 .set_pixel(x as usize, y as usize, color, 0.0);
         }
@@ -107,10 +107,10 @@ impl FrameBuffer {
             return;
         }
 
-        if d < self.depth_buffer[y * self.width + x] {
-            self.depth_buffer[y * self.width + x] = d;
-            self.color_buffer[y * self.width + x] = color.to_u32();
-        }
+        // if d < self.depth_buffer[y * self.width + x] {
+        self.depth_buffer[y * self.width + x] = d;
+        self.color_buffer[y * self.width + x] = color.to_u32();
+        // }
     }
 
     pub fn drawline(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, color: &Color) {
@@ -147,9 +147,7 @@ impl FrameBuffer {
         }
     }
 
-    pub fn draw_triangle(&mut self, tri: &Triangle) {
-
-    }
+    pub fn draw_triangle(&mut self, tri: &Triangle) {}
 }
 
 pub struct Scene {
@@ -233,6 +231,14 @@ impl Mesh {
         Mesh {
             triangles: updated_triangles,
         }
+    }
+
+    pub fn sort_triangles(&mut self) {
+        self.triangles.sort_by(|a, b| {
+            (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z)
+                .partial_cmp(&(b.vertices[0].z + b.vertices[1].z + b.vertices[2].z))
+                .unwrap()
+        });
     }
 }
 
@@ -342,22 +348,32 @@ impl Camera {
     pub fn get_proj_matrix(&self, aspect_ratio: f64, fov: f64, near: f64, far: f64) -> Matrix4D {
         let fov_rad = fov.to_radians();
 
+        // let S = 1.0 / ((/ 2.0) * (PI / 180.0)).tan();
+
         Matrix4D::new([
             [aspect_ratio * fov_rad, 0.0, 0.0, 0.0],
             [0.0, fov_rad, 0.0, 0.0],
+            // [S, 0.0, 0.0, 0.0],
+            // [0.0, S, 0.0, 0.0],
             [0.0, 0.0, far / (far - near), 1.0],
             [0.0, 0.0, (-far * near) / (far - near), 0.0],
         ])
     }
 
-    pub fn get_inverse_proj_matrix (&self, aspect_ratio: f64, fov: f64, near: f64, far: f64) -> Matrix4D {
+    pub fn get_inverse_proj_matrix(
+        &self,
+        aspect_ratio: f64,
+        fov: f64,
+        near: f64,
+        far: f64,
+    ) -> Matrix4D {
         let fov_rad = fov.to_radians();
 
         Matrix4D::new([
             [1.0 / (aspect_ratio * fov_rad), 0.0, 0.0, 0.0],
             [0.0, 1.0 / fov_rad, 0.0, 0.0],
             [0.0, 0.0, 0.0, (far - near) / -(far * near)],
-            [0.0, 0.0, 1.0, far/(far-near)]
+            [0.0, 0.0, 1.0, far / (far - near)],
         ])
     }
 }

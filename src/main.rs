@@ -69,7 +69,12 @@ const HEIGHT: usize = 720;
 fn main() {
     let screen_coords = Vector2D::new(1280.0, 10.0);
     println!("{}, {}", screen_coords.x, screen_coords.y);
-    let geo_coords = screen_to_geo(screen_coords.x as i32, screen_coords.y as i32, WIDTH, HEIGHT);
+    let geo_coords = screen_to_geo(
+        screen_coords.x as i32,
+        screen_coords.y as i32,
+        WIDTH,
+        HEIGHT,
+    );
     println!("{}, {}", geo_coords.x, geo_coords.y);
     let intermediate = Vector3D::new(geo_coords.x, geo_coords.y, 0.0);
     let screen_coords2 = geometric_to_screen(&intermediate, WIDTH, HEIGHT);
@@ -184,6 +189,8 @@ fn main() {
     };
 
     let proj_mat = cam.get_proj_matrix(f_aspect_ratio, f_fov, f_near, f_far);
+    let inv_proj_mat = cam.get_inverse_proj_matrix(f_aspect_ratio, f_fov, f_near, f_far);
+
     let mut frame_buffer = FrameBuffer::new(WIDTH, HEIGHT);
 
     let mut renderer = Renderer {
@@ -284,7 +291,7 @@ fn main() {
         let view_matrix = renderer.camera.create_view_matrix();
 
         for i in 0..3 {
-            let proj_2d = cube_mesh
+            let mut view_triangles = cube_mesh
                 // .apply_transformation(&mat_rot_z)
                 // .apply_transformation(&mat_rot_x)
                 // .apply_transformation(&get_x_rotation_matrix(cam_x_theta))
@@ -295,8 +302,12 @@ fn main() {
                     z: 3.0,
                 })
                 .translate(&renderer.camera.position.scale(-1.0))
-                .apply_transformation(&view_matrix)
-                .apply_transformation_with_perspective_div(&proj_mat);
+                .apply_transformation(&view_matrix);
+
+                view_triangles.sort_triangles();
+                view_triangles.triangles.reverse();
+
+                let proj_2d = view_triangles.apply_transformation_with_perspective_div(&proj_mat);
 
             for triangle in proj_2d.triangles {
                 // let mut on_screen = true;
@@ -309,34 +320,34 @@ fn main() {
                 let v2 = geometric_to_screen(&triangle.vertices[1], WIDTH, HEIGHT);
                 let v3 = geometric_to_screen(&triangle.vertices[2], WIDTH, HEIGHT);
 
-                // renderer.framebuffer.drawline(
-                //     v1.x as i32,
-                //     v1.y as i32,
-                //     v2.x as i32,
-                //     v2.y as i32,
-                //     &white,
-                // );
-                // renderer.framebuffer.drawline(
-                //     v2.x as i32,
-                //     v2.y as i32,
-                //     v3.x as i32,
-                //     v3.y as i32,
-                //     &white,
-                // );
-                // renderer.framebuffer.drawline(
-                //     v3.x as i32,
-                //     v3.y as i32,
-                //     v1.x as i32,
-                //     v1.y as i32,
-                //     &white,
-                // );
+                renderer.framebuffer.drawline(
+                    v1.x as i32,
+                    v1.y as i32,
+                    v2.x as i32,
+                    v2.y as i32,
+                    &white,
+                );
+                renderer.framebuffer.drawline(
+                    v2.x as i32,
+                    v2.y as i32,
+                    v3.x as i32,
+                    v3.y as i32,
+                    &white,
+                );
+                renderer.framebuffer.drawline(
+                    v3.x as i32,
+                    v3.y as i32,
+                    v1.x as i32,
+                    v1.y as i32,
+                    &white,
+                );
 
                 // let vertices_2d = vec![v1, v2, v3].iter().map(|v| Vector3D::new(v.x as f64, v.y as f64, 0.0)).collect();
 
                 // let tri_2d = Triangle {
                 //     vertices: vertices_2d,
                 // };
-                // println!("{}", triangle.vertices[0].z);
+                println!("{}", triangle.vertices[0].z);
 
                 renderer.fill_triangle(&v1, &v2, &v3, &triangle.color);
             }

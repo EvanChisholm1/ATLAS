@@ -203,7 +203,7 @@ pub fn multiply_matrix_vector_perspective_div(v: &Vector3D, mat: &Matrix4D) -> O
     if w != 0.0 {
         out.x /= w;
         out.y /= w;
-        out.z /= w;
+        out.z = w;
     }
 
     Some(out)
